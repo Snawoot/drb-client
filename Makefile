@@ -18,11 +18,6 @@ $(VENV):
 uninstall: $(VENV)
 	$(VENV)/bin/python -m pip uninstall -y $(PKG_NAME)
 
-man/%:
-	asciidoctor --backend=manpage $@.adoc
-
-doc: $(MANPAGES)
-
 clean:
 	$(RM) -rf $(VENV) $(PKGVENV) dist/ build/ $(PKG_NAME).egg-info/ man/*.?
 
