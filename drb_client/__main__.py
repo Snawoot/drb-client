@@ -11,7 +11,10 @@ from math import ceil
 import os
 
 from . import bn256
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.backends import default_backend
 import aiohttp
 
 COORD_SIZE = 32
@@ -57,7 +60,13 @@ def ecies_encrypt(recipient_pubkey, msg):
     priv, pub = keygen()
     dh_point = recipient_pubkey.scalar_mul(priv)
     dh_bin = marshall_pubkey(dh_point)
-    shared_key = hkdf(32, dh_bin)
+    backend = default_backend()
+    hkdf = HKDF(algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=None,
+                backend=backend)
+    shared_key = hkdf.derive(dh_bin)
     nonce = os.urandom(12)
     aesgcm = AESGCM(shared_key)
     ct = aesgcm.encrypt(nonce, msg, None)
