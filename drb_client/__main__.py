@@ -14,7 +14,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 COORD_SIZE = 32
 
-SERVER_ENDPOINT = 'https://drand.cloudflare.com:443/api/private'
+SERVER_ENDPOINT = 'https://drand.cloudflare.com/api/private'
+SERVER_ENDPOINT = 'http://localhost:8888/api/private'
 SERVER_PUBKEY = '6302462fa9da0b7c215d0826628ae86db04751c7583097a4902dd2ab827b7c5f21e3510d83ed58d3f4bf3e892349032eb3cd37d88215e601e43f32cbbe39917d5cc2272885f2bad0620217196d86d79da14135aebb8191276f32029f69e2727a5854b21a05642546ebc54df5e6e0d9351ea32efae3cd9f469a0359078d99197c'
 
 hash_len = 32
@@ -72,7 +73,6 @@ def make_req_body():
     server_pub = unmarshall_pubkey(bytes.fromhex(SERVER_PUBKEY))
     pub_bin = marshall_pubkey(pub)
     box = ecies_encrypt(server_pub, pub_bin)
-    print("box=%s" % repr(box))
     body = {
         "request": box,
     }
@@ -83,13 +83,14 @@ def make_req_body():
 def make_req():
     data = make_req_body()
     headers={
-        "Content-Type": 'application/json',
-        "User-Agent": "curl/7.64.0",
-        "Accept": '*/*',
+        "content-type": 'application/json',
+        "connection": 'keep-alive',
+        "user-agent": "curl/7.64.0",
+        "accept": '*/*',
     }
-    req = urllib.request.Request(SERVER_ENDPOINT, data=b'', headers=headers)
+    req = urllib.request.Request(SERVER_ENDPOINT, data=data, headers=headers)
     try:
-        with urllib.request.urlopen(req) as f:
+        with urllib.request.urlopen(req, timeout=5) as f:
             res = f.read()
     except urllib.error.HTTPError as exc:
         res = exc.read()
