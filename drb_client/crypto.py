@@ -7,16 +7,22 @@ from cryptography.hazmat.backends import default_backend
 from . import bn256
 
 COORD_SIZE = 32
+AES_GCM_NONCE_SIZE = 12
+AES_GCM_KEY_SIZE = 32
+G2_GID = 22
+G2_COORDS = 4
 backend = default_backend()
 
 def unmarshall_pubkey(pubkey):
-    assert len(pubkey) == 4 * COORD_SIZE
+    if not len(pubkey) == G2_COORDS * COORD_SIZE:
+        raise ValueError("G2: bad binary string length.")
     coords = tuple( int.from_bytes(pubkey[n*COORD_SIZE:(n+1) * COORD_SIZE], 'big') for n in range(4) )
     pk = bn256.curve_twist(
         bn256.gfp_2(coords[0], coords[1]),
         bn256.gfp_2(coords[2], coords[3]),
         bn256.gfp_2(0,1))
-    assert pk.is_on_curve()
+    if not pk.is_on_curve():
+        raise ValueError("G2: point is not on curve!")
     return pk
 
 def marshall_pubkey(pubkey):
@@ -31,7 +37,7 @@ def keygen():
 def key_from_point(point):
     dh_bin = marshall_pubkey(point)
     hkdf = HKDF(algorithm=hashes.SHA256(),
-                length=32,
+                length=AES_GCM_KEY_SIZE,
                 salt=None,
                 info=None,
                 backend=backend)
@@ -42,12 +48,12 @@ def ecies_encrypt(recipient_pubkey, msg):
     priv, pub = keygen()
     dh_point = recipient_pubkey.scalar_mul(priv)
     shared_key = key_from_point(dh_point)
-    nonce = os.urandom(12)
+    nonce = os.urandom(AES_GCM_NONCE_SIZE)
     aesgcm = AESGCM(shared_key)
     ct = aesgcm.encrypt(nonce, msg, None)
     return {
         'ephemeral': {
-            'gid': 22,
+            'gid': G2_GID,
             'point': marshall_pubkey(pub).hex(),
         },
         'nonce': nonce.hex(),
@@ -55,7 +61,8 @@ def ecies_encrypt(recipient_pubkey, msg):
     }
 
 def ecies_decrypt(privkey, box):
-    assert box['ephemeral']['gid'] == 22 # G2
+    if not box['ephemeral']['gid'] == G2_GID:
+        raise ValueError("Unsupported curve point!")
     eph_point = unmarshall_pubkey(bytes.fromhex(box['ephemeral']['point']))
     dh_point = eph_point.scalar_mul(privkey)
     shared_key = key_from_point(dh_point)
@@ -64,4 +71,3 @@ def ecies_decrypt(privkey, box):
                         bytes.fromhex(box['ciphertext']),
                         None)
     return pt
-
