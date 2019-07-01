@@ -15,7 +15,6 @@ from . import rest_client
 
 SERVER_ENDPOINT = 'https://drand.cloudflare.com/api/private'
 SERVER_PUBKEY = '6302462fa9da0b7c215d0826628ae86db04751c7583097a4902dd2ab827b7c5f21e3510d83ed58d3f4bf3e892349032eb3cd37d88215e601e43f32cbbe39917d5cc2272885f2bad0620217196d86d79da14135aebb8191276f32029f69e2727a5854b21a05642546ebc54df5e6e0d9351ea32efae3cd9f469a0359078d99197c'
-TIMEOUT=5
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -32,9 +31,6 @@ def parse_args():
     parser.add_argument("-l", "--logfile",
                         help="log file location",
                         metavar="FILE")
-    parser.add_argument("--disable-uvloop",
-                        help="do not use uvloop even if it is available",
-                        action="store_true")
 
     poll_group = parser.add_argument_group('poll options')
     poll_group.add_argument("-Q", "--quorum",
