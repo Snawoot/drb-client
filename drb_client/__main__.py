@@ -9,7 +9,7 @@ import hmac
 from math import ceil
 import os
 
-import bn256
+from . import bn256
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 COORD_SIZE = 32
