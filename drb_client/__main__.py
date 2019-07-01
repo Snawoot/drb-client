@@ -6,17 +6,19 @@ import pprint
 import collections.abc
 import hashlib
 import hmac
+import asyncio
 from math import ceil
 import os
 
 from . import bn256
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import aiohttp
 
 COORD_SIZE = 32
 
 SERVER_ENDPOINT = 'https://drand.cloudflare.com/api/private'
-SERVER_ENDPOINT = 'http://localhost:8888/api/private'
 SERVER_PUBKEY = '6302462fa9da0b7c215d0826628ae86db04751c7583097a4902dd2ab827b7c5f21e3510d83ed58d3f4bf3e892349032eb3cd37d88215e601e43f32cbbe39917d5cc2272885f2bad0620217196d86d79da14135aebb8191276f32029f69e2727a5854b21a05642546ebc54df5e6e0d9351ea32efae3cd9f469a0359078d99197c'
+TIMEOUT=5
 
 hash_len = 32
 def hmac_sha256(key, data):
@@ -76,28 +78,31 @@ def make_req_body():
     body = {
         "request": box,
     }
-    res = json.dumps(body)
-    print(res)
-    return res.encode('ascii')
+    return body
 
-def make_req():
+async def make_req():
+    timeout = aiohttp.ClientTimeout(total=TIMEOUT)
     data = make_req_body()
     headers={
-        "content-type": 'application/json',
-        "connection": 'keep-alive',
-        "user-agent": "curl/7.64.0",
-        "accept": '*/*',
+        'content-type': 'application/json',
+        'connection': 'keep-alive',
+        'user-agent': 'drb-client',
+        'accept': 'application/json',
     }
-    req = urllib.request.Request(SERVER_ENDPOINT, data=data, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=5) as f:
-            res = f.read()
-    except urllib.error.HTTPError as exc:
-        res = exc.read()
-    return res
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(SERVER_ENDPOINT,
+                                json=data,
+                                headers=headers,
+                                allow_redirects=False) as resp:
+            return await resp.json()
+
+async def amain(loop):
+    res = await make_req()
+    print(res)
 
 def main():
-    print(repr(make_req()))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(amain(loop))
 
 if __name__ == '__main__':
     main()
