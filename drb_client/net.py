@@ -110,12 +110,14 @@ class PollingSource(BaseEntropySource):
 
     async def get(self):
         tasks = [asyncio.ensure_future(q.get()) for q in self._queues]
-        responses = []
-        for fut in asyncio.as_completed(tasks):
-            responses.append(await fut)
-            if len(responses) >= self._quorum:
-                break
-        for task in tasks:
-            if not task.done():
-                task.cancel()
-        return self._mixer.mix(responses)
+        try:
+            responses = []
+            for fut in asyncio.as_completed(tasks):
+                responses.append(await fut)
+                if len(responses) >= self._quorum:
+                    break
+            return self._mixer.mix(responses)
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()

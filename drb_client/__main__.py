@@ -15,6 +15,7 @@ from .constants import LogLevel
 from . import utils
 from . import net
 from . import crypto
+from . import drain
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -71,9 +72,8 @@ async def amain(args, group_config, loop):  # pragma: no cover
                                   quorum=args.quorum,
                                   period=args.period)
     await aggregate.start()
-    for _ in range(3):
-        res = await aggregate.get()
-        pprint.pprint(res)
+    output = drain.StdoutEntropyDrain(aggregate, True)
+    await output.start()
 
     exit_event = asyncio.Event()
     beat = asyncio.ensure_future(utils.heartbeat())
@@ -87,6 +87,7 @@ async def amain(args, group_config, loop):  # pragma: no cover
     logger.debug("Eventloop interrupted. Shutting down server...")
     await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
     beat.cancel()
+    await output.stop()
     await aggregate.stop()
     await asyncio.gather(*(source.stop() for source in sources))
 
