@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import logging
 from abc import ABC, abstractmethod
 
 class BaseEntropyDrain(ABC):
@@ -16,6 +17,7 @@ class StdoutEntropyDrain(BaseEntropyDrain):
         self._source = source
         self._worker = None
         self._hex = hex
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     def _write(self, data):
         if self._hex:
@@ -24,6 +26,9 @@ class StdoutEntropyDrain(BaseEntropyDrain):
             with open(sys.stdout.fileno(), mode='wb', closefd=False) as out:
                 out.write(data)
                 out.flush()
+        length = len(data)
+        self._logger.info("Wrote %d bytes of entropy (%d bits)",
+                          length, length * 8)
 
     async def _serve(self):
         loop = asyncio.get_event_loop()
