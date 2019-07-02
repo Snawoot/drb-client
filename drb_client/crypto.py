@@ -17,10 +17,7 @@ def unmarshall_pubkey(pubkey):
     if not len(pubkey) == G2_COORDS * COORD_SIZE:
         raise ValueError("G2: bad binary string length.")
     coords = tuple( int.from_bytes(pubkey[n*COORD_SIZE:(n+1) * COORD_SIZE], 'big') for n in range(4) )
-    pk = bn256.curve_twist(
-        bn256.gfp_2(coords[0], coords[1]),
-        bn256.gfp_2(coords[2], coords[3]),
-        bn256.gfp_2(0,1))
+    pk = bn256.g2_unmarshall(*coords)
     if not pk.is_on_curve():
         raise ValueError("G2: point is not on curve!")
     return pk
