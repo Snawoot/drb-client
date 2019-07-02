@@ -56,7 +56,8 @@ optional arguments:
 
 poll options:
   -Q QUORUM, --quorum QUORUM
-                        minimal answers required on each poll (default: None)
+                        minimal answers required on each poll. Default value
+                        is (node_count // 2 + 1). (default: None)
   -T PERIOD, --period PERIOD
                         poll interval for each source (default: 60)
   -w TIMEOUT, --timeout TIMEOUT

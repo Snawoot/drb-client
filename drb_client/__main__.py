@@ -36,7 +36,8 @@ def parse_args():
     poll_group = parser.add_argument_group('poll options')
     poll_group.add_argument("-Q", "--quorum",
                             type=utils.check_positive_int,
-                            help="minimal answers required on each poll")
+                            help="minimal answers required on each poll. "
+                            "Default value is (node_count // 2 + 1).")
     poll_group.add_argument("-T", "--period",
                             default=60,
                             type=utils.check_positive_float,
