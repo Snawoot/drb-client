@@ -23,6 +23,7 @@ class StdoutEntropyDrain(BaseEntropyDrain):
         else:
             with open(sys.stdout.fileno(), mode='wb', closefd=False) as out:
                 out.write(data)
+                out.flush()
 
     async def _serve(self):
         loop = asyncio.get_event_loop()
