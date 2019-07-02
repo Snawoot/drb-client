@@ -1,4 +1,6 @@
 import os
+import logging
+from abc import ABC, abstractmethod
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -68,3 +70,39 @@ def ecies_decrypt(privkey, box):
                         bytes.fromhex(box['ciphertext']),
                         None)
     return pt
+
+class BaseEntropyMixer(ABC):
+    @abstractmethod
+    def mix(portions):
+        """ Accepts iterable with `bytes` strings to mix """
+
+class StatefulHKDFEntropyMixer(BaseEntropyMixer):
+    def __init__(self, output_size=32, initial_salt=None):
+        self._output_size = output_size
+        if not initial_salt:
+            self._current_salt = os.urandom(output_size)
+        else:
+            self._current_salt = initial_salt
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    def mix(self, data):
+        data = b''.join(data)
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=self._output_size,
+            salt=self._current_salt,
+            info=b'nextsalt',
+            backend=backend)
+        next_salt = hkdf.derive(data)
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=self._output_size,
+            salt=self._current_salt,
+            info=b'main_output',
+            backend=backend)
+        main_output = hkdf.derive(data)
+        self._current_salt = next_salt
+        self._logger.debug("KDF OUTPUT: salt=%s main=%s",
+                           next_salt.hex(),
+                           main_output.hex())
+        return main_output

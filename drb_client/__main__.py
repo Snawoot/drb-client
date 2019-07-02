@@ -14,6 +14,7 @@ import toml
 from .constants import LogLevel
 from . import utils
 from . import net
+from . import crypto
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -50,12 +51,13 @@ def parse_args():
 async def amain(args, group_config, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
+    mixer = crypto.StatefulHKDFEntropyMixer()
     nodes = [net.Identity(I['Address'], I['Key'], I['TLS'])
              for I in group_config["Nodes"]]
     sources = [net.DrandRESTSource(identity, args.timeout)
                for identity in nodes]
     await asyncio.gather(*(source.start() for source in sources))
-    aggregate = net.PollingSource(sources,
+    aggregate = net.PollingSource(sources, mixer,
                                   quorum=args.quorum,
                                   period=args.period)
     await aggregate.start()
@@ -83,7 +85,7 @@ def main():  # pragma: no cover
     args = parse_args()
     with utils.AsyncLoggingHandler(args.logfile) as log_handler:
         logger = utils.setup_logger('MAIN', args.verbosity, log_handler)
-        for cls in ('PollingSource', 'DrandRESTSource'):
+        for cls in ('PollingSource', 'DrandRESTSource', 'StatefulHKDFEntropyMixer'):
             utils.setup_logger(cls, args.verbosity, log_handler)
 
         with open(args.group_config) as f:

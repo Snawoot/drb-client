@@ -64,7 +64,7 @@ class DrandRESTSource(BaseEntropySource):
             self._logger.debug("URL[%s]: Delivered entropy.")
 
 class PollingSource(BaseEntropySource):
-    def __init__(self, sources, *, quorum=None, period=60, queue_size=None):
+    def __init__(self, sources, mixer, *, quorum=None, period=60, queue_size=5):
         self._sources = list(sources)
         source_count = len(list(sources))
         if not quorum:
@@ -72,10 +72,9 @@ class PollingSource(BaseEntropySource):
         if quorum > source_count:
             raise RuntimeError("Unreachable quorum: can't reach quorum = %d "
                                "with %d nodes" % (quorum, source_count))
+        self._mixer = mixer
         self._quorum = quorum
         self._period = period
-        if not queue_size:
-            queue_size = max(8, (source_count - quorum) * 2)
         self._queues = [asyncio.Queue(queue_size) for _ in range(source_count)]
         self._workers = []
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -119,4 +118,4 @@ class PollingSource(BaseEntropySource):
         for task in tasks:
             if not task.done():
                 task.cancel()
-        return responses
+        return self._mixer.mix(responses)
