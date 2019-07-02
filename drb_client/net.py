@@ -78,6 +78,9 @@ class PollingSource(BaseEntropySource):
         self._queues = [asyncio.Queue(queue_size) for _ in range(source_count)]
         self._workers = []
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger.info("Constructed polling entropy source: "
+                          "source_count=%d, mixer=%s, period=%.2f, quorum=%d",
+                          source_count, mixer.__class__.__name__, period, quorum)
 
     async def _worker(self, source, queue):
         while True:

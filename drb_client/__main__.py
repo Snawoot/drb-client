@@ -47,11 +47,6 @@ def parse_args():
                             help="timeout for each request")
 
     output_group = parser.add_argument_group('output options')
-    output_group.add_argument("-B", "--bytes",
-                            type=utils.check_positive_int,
-                            default=32,
-                            help="how many bytes should be derived from all "
-                            "responses of a poll")
     output_group.add_argument("-O", "--stdout",
                               action="store_true",
                               help="dump random data into stdout")
@@ -62,7 +57,7 @@ def parse_args():
 async def amain(args, group_config, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
-    mixer = crypto.StatefulHKDFEntropyMixer(args.bytes)
+    mixer = crypto.StatefulHKDFEntropyMixer()
     nodes = [net.Identity(I['Address'], I['Key'], I['TLS'])
              for I in group_config["Nodes"]]
     sources = [net.DrandRESTSource(identity, args.timeout)
@@ -72,7 +67,7 @@ async def amain(args, group_config, loop):  # pragma: no cover
                                   quorum=args.quorum,
                                   period=args.period)
     await aggregate.start()
-    output = drain.StdoutEntropyDrain(aggregate, True)
+    output = drain.StdoutEntropyDrain(aggregate)
     await output.start()
 
     exit_event = asyncio.Event()

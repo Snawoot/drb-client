@@ -77,10 +77,10 @@ class BaseEntropyMixer(ABC):
         """ Accepts iterable with `bytes` strings to mix """
 
 class StatefulHKDFEntropyMixer(BaseEntropyMixer):
-    def __init__(self, output_size=32, initial_salt=None):
-        self._output_size = output_size
+    def __init__(self, initial_salt=None):
+        self._output_size = 32
         if not initial_salt:
-            self._current_salt = os.urandom(output_size)
+            self._current_salt = os.urandom(self._output_size)
         else:
             self._current_salt = initial_salt
         self._logger = logging.getLogger(self.__class__.__name__)
