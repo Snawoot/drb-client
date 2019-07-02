@@ -4,6 +4,8 @@ Distributed Randomness Beacon client
 
 Fetches entropy from multiple [drand](https://github.com/dedis/drand) instances, securely mixes responses and outputs to stdout. Suitable for use with [League of Entropy](https://www.cloudflare.com/leagueofentropy/) servers (see "Running" section).
 
+`drb-client` can be used as a standalone source of high-quality random number, or as additional source for entropy pool in Linux kernel. Produced amount of entropy should be sufficient to derail attacks based on RNG predictability.
+
 ## Cryptography background
 
 `drb-client` polls list of `drand` servers with given interval and requests private entropy data portion from each one. Communication between `drb-client` and `drand` is protected with regular TLS and with BN256-derived AES256-GCM encryption on top of TLS (this is imposed by `drand` API format).
