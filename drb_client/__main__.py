@@ -13,7 +13,7 @@ from .constants import LogLevel
 from . import utils
 from . import net
 
-SERVER_ENDPOINT = 'https://drand.cloudflare.com/api/private'
+SERVER_ADDRESS = 'drand.cloudflare.com:443'
 SERVER_PUBKEY = '6302462fa9da0b7c215d0826628ae86db04751c7583097a4902dd2ab827b7c5f21e3510d83ed58d3f4bf3e892349032eb3cd37d88215e601e43f32cbbe39917d5cc2272885f2bad0620217196d86d79da14135aebb8191276f32029f69e2727a5854b21a05642546ebc54df5e6e0d9351ea32efae3cd9f469a0359078d99197c'
 
 def parse_args():
@@ -51,23 +51,10 @@ def parse_args():
 async def amain(args, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
-    #pool = ConnPool(dst_address=args.dst_address,
-    #                dst_port=args.dst_port,
-    #                ssl_context=context,
-    #                ssl_hostname=ssl_hostname,
-    #                timeout=args.timeout,
-    #                backoff=args.backoff,
-    #                ttl=args.ttl,
-    #                size=args.pool_size,
-    #                loop=loop)
-    #await pool.start()
-    #server = Listener(listen_address=args.bind_address,
-    #                  listen_port=args.bind_port,
-    #                  timeout=args.timeout,
-    #                  pool=pool,
-    #                  loop=loop)
-    #await server.start()
-    res = await net.req_priv_rand(SERVER_ENDPOINT, SERVER_PUBKEY)
+    identity = net.Identity(SERVER_ADDRESS, SERVER_PUBKEY, True)
+    source = net.DrandRESTSource(identity, args.timeout)
+    await source.start()
+    res = await source.get()
     print(res.hex())
     logger.info("Server started.")
 
@@ -83,8 +70,7 @@ async def amain(args, loop):  # pragma: no cover
     logger.debug("Eventloop interrupted. Shutting down server...")
     await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
     beat.cancel()
-    #await server.stop()
-    #await pool.stop()
+    await source.stop()
 
 
 def main():  # pragma: no cover
