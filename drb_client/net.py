@@ -1,6 +1,9 @@
+import asyncio
 import aiohttp
 import collections
+import logging
 from abc import ABC, abstractmethod
+import time
 
 from . import crypto
 
@@ -31,6 +34,7 @@ class DrandRESTSource(BaseEntropySource):
         self._headers = {
             'user-agent': 'drb-client',
         }
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     async def start(self):
         """ No async init required """
@@ -39,13 +43,80 @@ class DrandRESTSource(BaseEntropySource):
         """ No async shutdown required """
 
     async def get(self):
-        body = {
-            "request": crypto.ecies_encrypt(self._server_pubkey, self._pub_bin),
-        }
-        async with aiohttp.ClientSession(timeout=self._timeout) as session:
-            async with session.post(self._server_url,
-                                    json=body,
-                                    headers=self._headers,
-                                    allow_redirects=False) as resp:
-                res = await resp.json()
-        return crypto.ecies_decrypt(self._priv, res['response'])
+        try:
+            body = {
+                "request": crypto.ecies_encrypt(self._server_pubkey, self._pub_bin),
+            }
+            async with aiohttp.ClientSession(timeout=self._timeout) as session:
+                async with session.post(self._server_url,
+                                        json=body,
+                                        headers=self._headers,
+                                        allow_redirects=False) as resp:
+                    res = await resp.json()
+            return crypto.ecies_decrypt(self._priv, res['response'])
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self._logger.exception("URL[%s]: Got exception: %s",
+                                   self._server_url, str(exc))
+            raise
+        else:
+            self._logger.debug("URL[%s]: Delivered entropy.")
+
+class PollingSource(BaseEntropySource):
+    def __init__(self, sources, *, quorum=None, period=60, queue_size=None):
+        self._sources = list(sources)
+        source_count = len(list(sources))
+        if not quorum:
+            quorum = source_count // 2 + 1
+        if quorum > source_count:
+            raise RuntimeError("Unreachable quorum: can't reach quorum = %d "
+                               "with %d nodes" % (quorum, source_count))
+        self._quorum = quorum
+        self._period = period
+        if not queue_size:
+            queue_size = max(8, (source_count - quorum) * 2)
+        self._queues = [asyncio.Queue(queue_size) for _ in range(source_count)]
+        self._workers = []
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    async def _worker(self, source, queue):
+        while True:
+            poll_start_time = time.monotonic()
+            try:
+                entropy = await source.get()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._logger.error("Source failed to respond: %s", str(exc))
+            else:
+                await queue.put(entropy)
+                poll_duration = time.monotonic() - poll_start_time
+                sleep_for = max(0, self._period - poll_duration)
+                self._logger.debug("Delivered entropy into queue in %.2f seconds."
+                                   "Sleeping for %.2f seconds.",
+                                   poll_duration, sleep_for)
+                await asyncio.sleep(sleep_for)
+
+    async def start(self):
+        self._workers.extend(asyncio.ensure_future(self._worker(s, q))
+                             for s, q in zip(self._sources, self._queues))
+        self._logger.info("Fired %d async poll workers", len(self._sources))
+
+    async def stop(self):
+        for worker in self._workers:
+            worker.cancel()
+        await asyncio.wait(self._workers)
+        self._logger.info("Stopped %d async poll workers...", len(self._workers))
+
+    async def get(self):
+        tasks = [asyncio.ensure_future(q.get()) for q in self._queues]
+        responses = []
+        for fut in asyncio.as_completed(tasks):
+            responses.append(await fut)
+            if len(responses) >= self._quorum:
+                break
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        return responses

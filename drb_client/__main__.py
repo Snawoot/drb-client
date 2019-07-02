@@ -6,15 +6,14 @@ import asyncio
 import logging
 import signal
 from functools import partial
+import pprint
 
 from sdnotify import SystemdNotifier
+import toml
 
 from .constants import LogLevel
 from . import utils
 from . import net
-
-SERVER_ADDRESS = 'drand.cloudflare.com:443'
-SERVER_PUBKEY = '6302462fa9da0b7c215d0826628ae86db04751c7583097a4902dd2ab827b7c5f21e3510d83ed58d3f4bf3e892349032eb3cd37d88215e601e43f32cbbe39917d5cc2272885f2bad0620217196d86d79da14135aebb8191276f32029f69e2727a5854b21a05642546ebc54df5e6e0d9351ea32efae3cd9f469a0359078d99197c'
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -36,10 +35,10 @@ def parse_args():
     poll_group.add_argument("-Q", "--quorum",
                             type=utils.check_positive_int,
                             help="minimal answers required on each poll")
-    poll_group.add_argument("-D", "--delay",
+    poll_group.add_argument("-T", "--period",
                             default=60,
                             type=utils.check_positive_float,
-                            help="delay between each poll")
+                            help="poll interval for each source")
     poll_group.add_argument("-w", "--timeout",
                             default=4,
                             type=utils.check_positive_float,
@@ -48,15 +47,21 @@ def parse_args():
     return parser.parse_args()
 
 
-async def amain(args, loop):  # pragma: no cover
+async def amain(args, group_config, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
-    identity = net.Identity(SERVER_ADDRESS, SERVER_PUBKEY, True)
-    source = net.DrandRESTSource(identity, args.timeout)
-    await source.start()
-    res = await source.get()
-    print(res.hex())
-    logger.info("Server started.")
+    nodes = [net.Identity(I['Address'], I['Key'], I['TLS'])
+             for I in group_config["Nodes"]]
+    sources = [net.DrandRESTSource(identity, args.timeout)
+               for identity in nodes]
+    await asyncio.gather(*(source.start() for source in sources))
+    aggregate = net.PollingSource(sources,
+                                  quorum=args.quorum,
+                                  period=args.period)
+    await aggregate.start()
+    for _ in range(3):
+        res = await aggregate.get()
+        pprint.pprint(res)
 
     exit_event = asyncio.Event()
     beat = asyncio.ensure_future(utils.heartbeat())
@@ -70,18 +75,22 @@ async def amain(args, loop):  # pragma: no cover
     logger.debug("Eventloop interrupted. Shutting down server...")
     await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
     beat.cancel()
-    await source.stop()
+    await aggregate.stop()
+    await asyncio.gather(*(source.stop() for source in sources))
 
 
 def main():  # pragma: no cover
     args = parse_args()
     with utils.AsyncLoggingHandler(args.logfile) as log_handler:
         logger = utils.setup_logger('MAIN', args.verbosity, log_handler)
-        #utils.setup_logger('Listener', args.verbosity, log_handler)
-        #utils.setup_logger('ConnPool', args.verbosity, log_handler)
+        for cls in ('PollingSource', 'DrandRESTSource'):
+            utils.setup_logger(cls, args.verbosity, log_handler)
+
+        with open(args.group_config) as f:
+            group_config = toml.load(f)
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(amain(args, loop))
+        loop.run_until_complete(amain(args, group_config, loop))
         loop.close()
         logger.info("Server finished its work.")
 

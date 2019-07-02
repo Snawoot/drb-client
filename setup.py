@@ -22,7 +22,7 @@ setup(name='drb_client',
           'aiohttp>=3.4.4',
           'sdnotify>=0.3.2',
           'cryptography',
-          'tomlkit',
+          'toml',
       ],
       extras_require={
           'dev': [
