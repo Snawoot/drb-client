@@ -91,7 +91,8 @@ def main():  # pragma: no cover
     with utils.AsyncLoggingHandler(args.logfile) as log_handler:
         logger = utils.setup_logger('MAIN', args.verbosity, log_handler)
         for cls in ('PollingSource', 'DrandRESTSource',
-                    'StatefulHKDFEntropyMixer', 'StdoutEntropySink'):
+                    'StatefulHKDFEntropyMixer', 'StdoutEntropySink',
+                    'DevRandomSink'):
             utils.setup_logger(cls, args.verbosity, log_handler)
 
         with open(args.group_config) as f:

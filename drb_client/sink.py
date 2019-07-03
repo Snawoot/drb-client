@@ -59,10 +59,54 @@ class StdoutEntropySink(BaseEntropySink):
     async def __aexit__(self, exc_type, exc, tb):
         await self.stop()
 
+class DevRandomSink(BaseEntropySink):
+    def __init__(self, source):
+        self._source = source
+        self._worker = None
+        self._file = None
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    def _open_file(self):
+        return open('/dev/random', 'wb')
+
+    def _close_file(self, f):
+        return f.close()
+
+    def _write(self, data):
+        self._file.write(data)
+        self._file.flush()
+        length = len(data)
+        self._logger.info("Wrote %d bytes of entropy (%d bits)",
+                          length, length * 8)
+
+    async def _serve(self):
+        loop = asyncio.get_event_loop()
+        while True:
+            data = await self._source.get()
+            await loop.run_in_executor(None, self._write, data)
+
+    async def start(self):
+        loop = asyncio.get_event_loop()
+        self._file = await loop.run_in_executor(None, self._open_file)
+        self._worker = asyncio.ensure_future(self._serve())
+
+    async def stop(self):
+        self._worker.cancel()
+        await asyncio.wait((self._worker,))
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._close_file, self._file)
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.stop()
+
 class EntropySinkEnum(enum.Enum):
     stdout = StdoutEntropySink
     rndaddentropy = 2
-    devrandom = 3
+    devrandom = DevRandomSink
 
     def __str__(self):
         return self.name

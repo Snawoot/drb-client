@@ -64,6 +64,10 @@ class DrandRESTSource(BaseEntropySource):
             return crypto.ecies_decrypt(self._priv, res['response'])
         except asyncio.CancelledError:
             raise
+        except asyncio.TimeoutError:
+            self._logger.error("URL[%s]: Request timed out.",
+                                   self._server_url, str(exc))
+            raise
         except Exception as exc:
             self._logger.exception("URL[%s]: Got exception: %s",
                                    self._server_url, str(exc))
