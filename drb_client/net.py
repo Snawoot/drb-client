@@ -21,7 +21,7 @@ class BaseEntropySource(ABC):
     @abstractmethod
     async def stop(self):
         """ Shutdown source """
-    
+
     @abstractmethod
     async def __aenter__(self):
         """ Context manager form for start() """
