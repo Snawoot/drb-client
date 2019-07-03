@@ -2,23 +2,29 @@
 
 Distributed Randomness Beacon client
 
-Fetches entropy from multiple [drand](https://github.com/dedis/drand) instances, securely mixes responses and outputs to kernel entropy pool or stdout. Suitable for use with [League of Entropy](https://www.cloudflare.com/leagueofentropy/) servers (see "Running" section).
+Gathers entropy from multiple [drand](https://github.com/dedis/drand) instances, securely mixes responses and outputs to kernel entropy pool or stdout. Suitable for use with [League of Entropy](https://www.cloudflare.com/leagueofentropy/) servers (see "Running" section).
 
 `drb-client` can be used as a standalone source of high-quality random number, or as additional source for entropy pool in Linux kernel. Produced amount of entropy should be sufficient to derail attacks based on RNG predictability.
 
 ## Cryptography background
 
-`drb-client` polls list of `drand` servers with given interval and requests private entropy data portion from each one. Communication between `drb-client` and `drand` is protected with regular TLS and with BN256-derived AES256-GCM encryption on top of TLS (this is imposed by `drand` API format).
+`drb-client` polls list of `drand` servers with given interval and requests private entropy data portion from each one. Communication between `drb-client` and `drand` is protected with AES256-GCM encryption derived on BN-256 curve on top of TLS (this is imposed by `drand` API format).
 
 `drb-client` constructs each output of entropy from at least `quorum` (`-Q` option) distinct inputs. It is assumed at least `node_count - quorum + 1` nodes produce truly unpredictable secure random numbers, so any `quorum` of distinct responses definitely contain at least one truly random input (due to [pigeonhole principle](https://en.wikipedia.org/wiki/Pigeonhole_principle)).
 
-Entropy portions from beacon servers are mixed using stateful HKDF-based mixer. Each sufficient set of random responses is used to produce random output and new salt value for HKDF mixer. Therefore, after successful generation of first output, mixer output becomes unpredictable even if all beacon servers get compromised and start feeding client with biased data.
+Entropy portions from beacon servers are mixed using stateful HKDF-based mixer. Each sufficient set of random responses is used to produce random output and new salt value for HKDF mixer. Therefore, mixer output becomes unpredictable after successful generation of first output, even if all beacon servers get compromised and start feeding client with biased data.
 
 Default poll interval is 60 seconds and such interval is chosen for a reason. `drand` generates entropy for each response using its `/dev/urandom`. On Linux `urandom` gets reinitialized from `/dev/random` each 1 minute. So there is no reason to fetch random data more often: responses between reinitializations are in functional dependence.
 
 ## Installation
 
-Requires Python 3.5+
+Requires Python 3.5.3+
+
+## From PyPI
+
+```
+pip3 install drb-client
+```
 
 ### From source
 
