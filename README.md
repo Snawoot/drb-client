@@ -32,14 +32,21 @@ drb-client group.toml
 
 You may obtain latest `group.toml` config with list of League of Entropy servers [here](https://github.com/dedis/drand/tree/master/deploy).
 
-Program will start write random bytes to stdout and log messages to stderr. For logging into file see "Synopsis" section. At this moment stdout is only supported entropy sink.
+There are few available entropy sinks (option `-O`):
+
+* `devrandom` - (default) writes collected entropy into `/dev/random` device, without increment of kernel counter of available entropy in pool.
+* `stdout` - writes collected entropy into standard output.
+* `rndaddentropy` - writes collected entropy into `/dev/random` device with increment of kernel counter of available entropy in pool. Requires superuser privileges to operate.
+
+Program will start write random bytes to `/dev/random`, contributing into pool entropy, and log messages to stderr. For logging into file see "Synopsis" section.
 
 ## Synopsis
 
 ```
 $ drb-client --help
 usage: drb-client [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
-                  [-Q QUORUM] [-T PERIOD] [-w TIMEOUT] [-O]
+                  [-Q QUORUM] [-T PERIOD] [-w TIMEOUT]
+                  [-O {stdout,rndaddentropy,devrandom}]
                   group_config
 
 Distributed Randomness Beacon client
@@ -64,7 +71,8 @@ poll options:
                         timeout for each request (default: 4)
 
 output options:
-  -O, --stdout          dump random data into stdout (default: False)
+  -O {stdout,rndaddentropy,devrandom}, --output {stdout,rndaddentropy,devrandom}
+                        entropy output (default: devrandom)
 ```
 
 
