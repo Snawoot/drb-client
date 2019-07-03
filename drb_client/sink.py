@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import logging
+import enum
 from abc import ABC, abstractmethod
 
 class BaseEntropySink(ABC):
@@ -58,3 +59,10 @@ class StdoutEntropySink(BaseEntropySink):
     async def __aexit__(self, exc_type, exc, tb):
         await self.stop()
 
+class EntropySinkEnum(enum.Enum):
+    stdout = StdoutEntropySink
+    rndaddentropy = 2
+    devrandom = 3
+
+    def __str__(self):
+        return self.name

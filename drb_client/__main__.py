@@ -11,7 +11,6 @@ from sdnotify import SystemdNotifier
 import toml
 from async_exit_stack import AsyncExitStack
 
-from .constants import LogLevel, EntropySink
 from . import utils
 from . import net
 from . import crypto
@@ -28,8 +27,8 @@ def parse_args():
     parser.add_argument("-v", "--verbosity",
                         help="logging verbosity",
                         type=utils.check_loglevel,
-                        choices=LogLevel,
-                        default=LogLevel.info)
+                        choices=utils.LogLevel,
+                        default=utils.LogLevel.info)
     parser.add_argument("-l", "--logfile",
                         help="log file location",
                         metavar="FILE")
@@ -51,8 +50,8 @@ def parse_args():
     output_group = parser.add_argument_group('output options')
     output_group.add_argument("-O", "--output",
                               type=utils.check_entropysink,
-                              choices=EntropySink,
-                              default=EntropySink.devrandom,
+                              choices=sink.EntropySinkEnum,
+                              default=sink.EntropySinkEnum.devrandom,
                               help="entropy output")
 
     return parser.parse_args()
@@ -71,7 +70,7 @@ async def amain(args, group_config, loop):  # pragma: no cover
         async with net.PollingSource(sources, mixer,
                                      quorum=args.quorum,
                                      period=args.period) as aggregate:
-            async with sink.StdoutEntropySink(aggregate) as output:
+            async with args.output.value(aggregate) as output:
 
                 exit_event = asyncio.Event()
                 beat = asyncio.ensure_future(utils.heartbeat())

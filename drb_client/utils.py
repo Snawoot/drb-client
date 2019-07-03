@@ -1,13 +1,25 @@
 import asyncio
 import argparse
+import enum
 import logging
 import logging.handlers
 import ssl
 import os
 import queue
 
-from . import constants
+from .sink import EntropySinkEnum
 
+
+class LogLevel(enum.IntEnum):
+    debug = logging.DEBUG
+    info = logging.INFO
+    warn = logging.WARN
+    error = logging.ERROR
+    fatal = logging.FATAL
+    crit = logging.CRITICAL
+
+    def __str__(self):
+        return self.name
 
 class OverflowingQueue(queue.Queue):
     def put(self, item, block=True, timeout=None):
@@ -78,14 +90,14 @@ def check_positive_int(value):
 
 def check_loglevel(arg):
     try:
-        return constants.LogLevel[arg]
+        return LogLevel[arg]
     except (IndexError, KeyError):
         raise argparse.ArgumentTypeError("%s is not valid loglevel" % (repr(arg),))
 
 
 def check_entropysink(arg):
     try:
-        return constants.EntropySink[arg]
+        return EntropySinkEnum[arg]
     except (IndexError, KeyError):
         raise argparse.ArgumentTypeError("%s is not valid entropy sink" % (repr(arg),))
 
