@@ -11,7 +11,7 @@ from sdnotify import SystemdNotifier
 import toml
 from async_exit_stack import AsyncExitStack
 
-from .constants import LogLevel
+from .constants import LogLevel, EntropySink
 from . import utils
 from . import net
 from . import crypto
@@ -49,9 +49,11 @@ def parse_args():
                             help="timeout for each request")
 
     output_group = parser.add_argument_group('output options')
-    output_group.add_argument("-O", "--stdout",
-                              action="store_true",
-                              help="dump random data into stdout")
+    output_group.add_argument("-O", "--output",
+                              type=utils.check_entropysink,
+                              choices=EntropySink,
+                              default=EntropySink.devrandom,
+                              help="entropy output")
 
     return parser.parse_args()
 

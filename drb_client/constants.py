@@ -17,3 +17,6 @@ class EntropySink(enum.Enum):
     stdout = 1
     rndaddentropy = 2
     devrandom = 3
+
+    def __str__(self):
+        return self.name
