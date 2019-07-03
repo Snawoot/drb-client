@@ -66,7 +66,7 @@ class DrandRESTSource(BaseEntropySource):
             raise
         except asyncio.TimeoutError:
             self._logger.error("URL[%s]: Request timed out.",
-                                   self._server_url, str(exc))
+                                   self._server_url)
             raise
         except Exception as exc:
             self._logger.exception("URL[%s]: Got exception: %s",
