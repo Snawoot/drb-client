@@ -93,6 +93,12 @@ output options:
                         entropy output (default: devrandom)
 ```
 
+## Deployment
+
+You may obtain latest `group.toml` config with list of League of Entropy servers [here](https://github.com/dedis/drand/tree/master/deploy).
+
+See [deploy/drb-client.service](https://github.com/Snawoot/drb-client/blob/master/deploy/drb-client.service) for example of systemd unit file.
+
 
 ## Credits
 
