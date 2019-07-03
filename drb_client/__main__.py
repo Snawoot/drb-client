@@ -92,7 +92,7 @@ def main():  # pragma: no cover
         logger = utils.setup_logger('MAIN', args.verbosity, log_handler)
         for cls in ('PollingSource', 'DrandRESTSource',
                     'StatefulHKDFEntropyMixer', 'StdoutEntropySink',
-                    'DevRandomSink'):
+                    'DevRandomSink', 'RndAddEntropySink'):
             utils.setup_logger(cls, args.verbosity, log_handler)
 
         with open(args.group_config) as f:
