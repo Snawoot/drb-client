@@ -21,6 +21,14 @@ class BaseEntropySource(ABC):
     @abstractmethod
     async def stop(self):
         """ Shutdown source """
+    
+    @abstractmethod
+    async def __aenter__(self):
+        """ Context manager form for start() """
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc, tb):
+        """ Context manager form for stop() """
 
 class DrandRESTSource(BaseEntropySource):
     def __init__(self, identity, timeout=5):
@@ -62,6 +70,13 @@ class DrandRESTSource(BaseEntropySource):
             raise
         else:
             self._logger.debug("URL[%s]: Delivered entropy.")
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.stop()
 
 class PollingSource(BaseEntropySource):
     def __init__(self, sources, mixer, *, quorum=None, period=60, queue_size=5):
@@ -124,3 +139,11 @@ class PollingSource(BaseEntropySource):
             for task in tasks:
                 if not task.done():
                     task.cancel()
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.stop()
+

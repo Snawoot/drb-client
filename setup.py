@@ -23,6 +23,7 @@ setup(name='drb_client',
           'sdnotify>=0.3.2',
           'cryptography',
           'toml',
+          'async_exit_stack',
       ],
       extras_require={
           'dev': [

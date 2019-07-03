@@ -83,6 +83,13 @@ def check_loglevel(arg):
         raise argparse.ArgumentTypeError("%s is not valid loglevel" % (repr(arg),))
 
 
+def check_entropysink(arg):
+    try:
+        return constants.EntropySink[arg]
+    except (IndexError, KeyError):
+        raise argparse.ArgumentTypeError("%s is not valid entropy sink" % (repr(arg),))
+
+
 def exit_handler(exit_event, signum, frame):  # pragma: no cover pylint: disable=unused-argument
     logger = logging.getLogger('MAIN')
     if exit_event.is_set():

@@ -32,7 +32,7 @@ drb-client group.toml
 
 You may obtain latest `group.toml` config with list of League of Entropy servers [here](https://github.com/dedis/drand/tree/master/deploy).
 
-Program will start write random bytes to stdout and log messages to stderr. For logging into file see "Synopsis" section. At this moment stdout is only supported entropy drain.
+Program will start write random bytes to stdout and log messages to stderr. For logging into file see "Synopsis" section. At this moment stdout is only supported entropy sink.
 
 ## Synopsis
 

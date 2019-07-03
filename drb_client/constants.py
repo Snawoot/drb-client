@@ -12,3 +12,8 @@ class LogLevel(enum.IntEnum):
 
     def __str__(self):
         return self.name
+
+class EntropySink(enum.Enum):
+    stdout = 1
+    rndaddentropy = 2
+    devrandom = 3

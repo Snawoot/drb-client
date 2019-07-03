@@ -3,16 +3,24 @@ import sys
 import logging
 from abc import ABC, abstractmethod
 
-class BaseEntropyDrain(ABC):
+class BaseEntropySink(ABC):
     @abstractmethod
     async def start(self):
-        """ Start draining entropy from given source """
+        """ Start sinking entropy from given source """
 
     @abstractmethod
     async def stop(self):
-        """ Stop entropy drain """
+        """ Stop entropy sink """
 
-class StdoutEntropyDrain(BaseEntropyDrain):
+    @abstractmethod
+    async def __aenter__(self):
+        """ Context manager form for start() """
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc, tb):
+        """ Context manager form for stop() """
+
+class StdoutEntropySink(BaseEntropySink):
     def __init__(self, source, hex=False):
         self._source = source
         self._worker = None
@@ -42,3 +50,11 @@ class StdoutEntropyDrain(BaseEntropyDrain):
     async def stop(self):
         self._worker.cancel()
         await asyncio.wait((self._worker,))
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.stop()
+
