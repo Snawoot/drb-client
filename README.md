@@ -32,13 +32,13 @@ drb-client group.toml
 
 You may obtain latest `group.toml` config with list of League of Entropy servers [here](https://github.com/dedis/drand/tree/master/deploy).
 
+Program will start write random bytes to `/dev/random`, contributing into pool entropy, and log messages to stderr. For logging into file see "Synopsis" section.
+
 There are few available entropy sinks (option `-O`):
 
 * `devrandom` - (default) writes collected entropy into `/dev/random` device, without increment of kernel counter of available entropy in pool.
 * `stdout` - writes collected entropy into standard output.
 * `rndaddentropy` - writes collected entropy into `/dev/random` device with increment of kernel counter of available entropy in pool. Requires superuser privileges to operate.
-
-Program will start write random bytes to `/dev/random`, contributing into pool entropy, and log messages to stderr. For logging into file see "Synopsis" section.
 
 ## Synopsis
 
