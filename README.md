@@ -18,27 +18,39 @@ Default poll interval is 60 seconds and such interval is chosen for a reason. `d
 
 ## Installation
 
+Requires Python 3.5+
+
+### From source
+
+Download or clone repository and run following command in source code directory:
+
 ```
 pip3 install .
 ```
 
-Requires Python 3.5+
-
 ## Running
-
-```
-drb-client group.toml
-```
-
-You may obtain latest `group.toml` config with list of League of Entropy servers [here](https://github.com/dedis/drand/tree/master/deploy).
-
-Program will start write random bytes to `/dev/random`, contributing into pool entropy, and log messages to stderr. For logging into file see "Synopsis" section.
 
 There are few available entropy sinks (option `-O`):
 
 * `devrandom` - (default) writes collected entropy into `/dev/random` device, without increment of kernel counter of available entropy in pool.
 * `stdout` - writes collected entropy into standard output.
 * `rndaddentropy` - writes collected entropy into `/dev/random` device with increment of kernel counter of available entropy in pool. Requires superuser privileges to operate.
+
+You may obtain latest `group.toml` config with list of League of Entropy servers [here](https://github.com/dedis/drand/tree/master/deploy).
+
+Run with default sink:
+
+```
+drb-client group.toml
+```
+
+Contribute into `/dev/random` and increment entropy counter:
+
+```
+sudo drb-client -O rndaddentropy group.toml
+```
+
+For logging into file see "Synopsis" section.
 
 ## Synopsis
 
