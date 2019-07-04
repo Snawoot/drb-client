@@ -20,7 +20,7 @@ Default poll interval is 60 seconds and such interval is chosen for a reason. `d
 
 Requires Python 3.5.3+
 
-## From PyPI
+### From PyPI
 
 ```
 pip3 install drb-client
