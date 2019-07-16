@@ -4,7 +4,7 @@ import logging
 import enum
 import os
 import struct
-import fcntl
+import importlib
 from abc import ABC, abstractmethod
 
 RNDADDENTROPY = 1074287107
@@ -110,6 +110,7 @@ class DevRandomSink(BaseEntropySink):
 
 class RndAddEntropySink(BaseEntropySink):
     def __init__(self, source):
+        self._fcntl = importlib.import_module('fcntl')
         self._source = source
         self._worker = None
         self._file = None
@@ -126,7 +127,7 @@ class RndAddEntropySink(BaseEntropySink):
             length = len(data)
             S = struct.Struct('@ii%ds' % (length,))
             rand_pool_info = S.pack(length * 8, length, data)
-            fcntl.ioctl(self._file, RNDADDENTROPY, rand_pool_info)
+            self._fcntl.ioctl(self._file, RNDADDENTROPY, rand_pool_info)
         except Exception as exc:
             self._logger.exception("Write failed with exception: %s", str(exc))
         else:
