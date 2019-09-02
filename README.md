@@ -63,7 +63,7 @@ For logging into file see "Synopsis" section.
 ```
 $ drb-client --help
 usage: drb-client [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
-                  [-Q QUORUM] [-T PERIOD] [-w TIMEOUT]
+                  [-Q QUORUM] [-T PERIOD] [-B BACKOFF] [-w TIMEOUT]
                   [-O {stdout,rndaddentropy,devrandom}]
                   group_config
 
@@ -85,6 +85,8 @@ poll options:
                         is (node_count // 2 + 1). (default: None)
   -T PERIOD, --period PERIOD
                         poll interval for each source (default: 60)
+  -B BACKOFF, --backoff BACKOFF
+                        backoff after source failure (default: 10)
   -w TIMEOUT, --timeout TIMEOUT
                         timeout for each request (default: 4)
 
