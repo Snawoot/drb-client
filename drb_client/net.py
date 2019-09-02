@@ -96,7 +96,7 @@ class DrandRESTSource(BaseEntropySource):
         await self.stop()
 
 class PollingSource(BaseEntropySource):
-    def __init__(self, sources, mixer, *, quorum=None, period=60, queue_size=5):
+    def __init__(self, sources, mixer, *, quorum=None, period=60, queue_size=5, backoff=10):
         self._sources = list(sources)
         source_count = len(list(sources))
         if not quorum:
@@ -107,6 +107,7 @@ class PollingSource(BaseEntropySource):
         self._mixer = mixer
         self._quorum = quorum
         self._period = period
+        self._backoff = backoff
         self._queues = [asyncio.Queue(queue_size) for _ in range(source_count)]
         self._workers = []
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -122,7 +123,9 @@ class PollingSource(BaseEntropySource):
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                self._logger.error("Source failed to respond: %s", str(exc))
+                self._logger.error("Source failed to respond: %s. "
+                                   "Backoff for %.2f seconds...", str(exc), self._backoff)
+                await asyncio.sleep(self._backoff)
             else:
                 await queue.put(entropy)
                 poll_duration = time.monotonic() - poll_start_time
