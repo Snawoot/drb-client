@@ -43,6 +43,10 @@ def parse_args():
                             default=60,
                             type=utils.check_positive_float,
                             help="poll interval for each source")
+    poll_group.add_argument("-B", "--backoff",
+                            default=10,
+                            type=utils.check_positive_float,
+                            help="backoff after source failure")
     poll_group.add_argument("-w", "--timeout",
                             default=4,
                             type=utils.check_positive_float,
@@ -76,7 +80,8 @@ async def amain(args, group_config, loop):  # pragma: no cover
             await asyncio.gather(*(stack.enter_async_context(source) for source in sources))
             async with net.PollingSource(sources, mixer,
                                          quorum=args.quorum,
-                                         period=args.period) as aggregate:
+                                         period=args.period,
+                                         backoff=args.backoff) as aggregate:
                 async with args.output.value(aggregate) as output:
                     notifier = await loop.run_in_executor(None, SystemdNotifier)
                     await loop.run_in_executor(None, notifier.notify, "READY=1")
