@@ -31,29 +31,38 @@ class BaseEntropySource(ABC):
         """ Context manager form for stop() """
 
 class DrandRESTSource(BaseEntropySource):
-    def __init__(self, identity, timeout=5):
+    def __init__(self, identity, timeout=5, *,
+                pool=None, loop=None):
         """ Expects Identity instance and timeout in seconds """
         self._server_pubkey = crypto.unmarshall_pubkey(bytes.fromhex(identity.pubkey))
         self._server_url = 'https://%s/api/private' % (identity.address,)
         self._timeout = aiohttp.ClientTimeout(total=timeout)
+        self._pool = pool
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
+        self._started = asyncio.Event()
 
-        self._priv, pub = crypto.keygen()
-        self._pub_bin = crypto.marshall_pubkey(pub)
         self._headers = {
             'user-agent': 'drb-client',
         }
         self._logger = logging.getLogger(self.__class__.__name__)
 
     async def start(self):
-        """ No async init required """
+        self._priv, pub = await self._loop.run_in_executor(self._pool, crypto.keygen)
+        self._pub_bin = await self._loop.run_in_executor(self._pool, crypto.marshall_pubkey, pub)
+        self._started.set()
 
     async def stop(self):
         """ No async shutdown required """
 
     async def get(self):
+        await self._started.wait()
         try:
+            req_body = await self._loop.run_in_executor(self._pool,
+                                                       crypto.ecies_encrypt,
+                                                       self._server_pubkey,
+                                                       self._pub_bin)
             body = {
-                "request": crypto.ecies_encrypt(self._server_pubkey, self._pub_bin),
+                "request": req_body,
             }
             async with aiohttp.ClientSession(timeout=self._timeout) as session:
                 async with session.post(self._server_url,
@@ -61,7 +70,11 @@ class DrandRESTSource(BaseEntropySource):
                                         headers=self._headers,
                                         allow_redirects=False) as resp:
                     res = await resp.json()
-            return crypto.ecies_decrypt(self._priv, res['response'])
+            dec_res = await self._loop.run_in_executor(self._pool,
+                                                       crypto.ecies_decrypt,
+                                                       self._priv,
+                                                       res['response'])
+            return dec_res
         except asyncio.CancelledError:
             raise
         except asyncio.TimeoutError:

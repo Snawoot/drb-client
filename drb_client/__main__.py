@@ -6,6 +6,7 @@ import asyncio
 import logging
 import signal
 from functools import partial
+from concurrent.futures import ProcessPoolExecutor
 
 from sdnotify import SystemdNotifier
 import toml
@@ -59,31 +60,31 @@ def parse_args():
 
 async def amain(args, group_config, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
+    exit_event = asyncio.Event()
+    sig_handler = partial(utils.exit_handler, exit_event)
+    signal.signal(signal.SIGTERM, sig_handler)
+    signal.signal(signal.SIGINT, sig_handler)
+    beat = asyncio.ensure_future(utils.heartbeat())
 
     mixer = crypto.StatefulHKDFEntropyMixer()
     nodes = [net.Identity(I['Address'], I['Key'], I['TLS'])
              for I in group_config["Nodes"]]
-    sources = [net.DrandRESTSource(identity, args.timeout)
-               for identity in nodes]
-    async with AsyncExitStack() as stack:
-        await asyncio.gather(*(stack.enter_async_context(source) for source in sources))
-        async with net.PollingSource(sources, mixer,
-                                     quorum=args.quorum,
-                                     period=args.period) as aggregate:
-            async with args.output.value(aggregate) as output:
+    with ProcessPoolExecutor() as pool_executor:
+        sources = [net.DrandRESTSource(identity, args.timeout, pool=pool_executor)
+                   for identity in nodes]
+        async with AsyncExitStack() as stack:
+            await asyncio.gather(*(stack.enter_async_context(source) for source in sources))
+            async with net.PollingSource(sources, mixer,
+                                         quorum=args.quorum,
+                                         period=args.period) as aggregate:
+                async with args.output.value(aggregate) as output:
+                    notifier = await loop.run_in_executor(None, SystemdNotifier)
+                    await loop.run_in_executor(None, notifier.notify, "READY=1")
+                    await exit_event.wait()
 
-                exit_event = asyncio.Event()
-                beat = asyncio.ensure_future(utils.heartbeat())
-                sig_handler = partial(utils.exit_handler, exit_event)
-                signal.signal(signal.SIGTERM, sig_handler)
-                signal.signal(signal.SIGINT, sig_handler)
-                notifier = await loop.run_in_executor(None, SystemdNotifier)
-                await loop.run_in_executor(None, notifier.notify, "READY=1")
-                await exit_event.wait()
-
-                logger.debug("Eventloop interrupted. Shutting down server...")
-                await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
-                beat.cancel()
+                    logger.debug("Eventloop interrupted. Shutting down server...")
+                    await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
+                    beat.cancel()
 
 
 def main():  # pragma: no cover
