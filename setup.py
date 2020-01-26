@@ -20,7 +20,6 @@ setup(name='drb_client',
       ],
       install_requires=[
           'aiohttp>=3.4.4',
-          'sdnotify>=0.3.2',
           'cryptography>=2.0',
           'toml',
           'async_exit_stack',

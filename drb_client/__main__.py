@@ -8,10 +8,10 @@ import signal
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 
-from sdnotify import SystemdNotifier
 import toml
 from async_exit_stack import AsyncExitStack
 
+from .asdnotify import AsyncSystemdNotifier
 from . import utils
 from . import net
 from . import crypto
@@ -83,13 +83,13 @@ async def amain(args, group_config, loop):  # pragma: no cover
                                          period=args.period,
                                          backoff=args.backoff) as aggregate:
                 async with args.output.value(aggregate) as output:
-                    notifier = await loop.run_in_executor(None, SystemdNotifier)
-                    await loop.run_in_executor(None, notifier.notify, "READY=1")
-                    await exit_event.wait()
+                    async with AsyncSystemdNotifier() as notifier:
+                        await notifier.notify(b"READY=1")
+                        await exit_event.wait()
 
-                    logger.debug("Eventloop interrupted. Shutting down server...")
-                    await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
-                    beat.cancel()
+                        logger.debug("Eventloop interrupted. Shutting down server...")
+                        await notifier.notify(b"STOPPING=1")
+    beat.cancel()
 
 
 def main():  # pragma: no cover
