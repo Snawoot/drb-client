@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()  # pylint: disable=invalid-name
 
 setup(name='drb_client',
-      version='0.3.0',
+      version='0.4.0',
       description='Distributed Randomness Beacon client',
       url='https://github.com/Snawoot/drb-client',
       author='Vladislav Yarmak',
