@@ -15,6 +15,7 @@ parts:
     source: .
     build-packages:
       - libffi-dev
+      - libssl-dev
 apps:
   drb-client:
     command: bin/drb-client
