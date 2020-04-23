@@ -1,0 +1,20 @@
+name: drb-client
+version: '0.4.0'
+summary: Distributed Randomness Beacon client.
+description: |
+  Gathers entropy from multiple drand(https://github.com/dedis/drand) instances, securely mixes responses and outputs to kernel entropy pool or stdout. Suitable for use with League of Entropy(https://www.cloudflare.com/leagueofentropy/) servers.
+  
+  `drb-client` can be used as a standalone source of high-quality random number, or as additional source for entropy pool in Linux kernel. Produced amount of entropy should be sufficient to derail attacks based on RNG predictability.
+confinement: strict
+base: core18
+
+parts:
+  drb-client:
+    plugin: python
+    python-version: python3
+    source: .
+apps:
+  drb-client:
+    command: bin/drb-client
+    plugs:
+      - network
